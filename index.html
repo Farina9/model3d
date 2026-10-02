@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>نمایشگر سه‌بعدی WebAR</title>
 
-  <!-- بارگذاری کتابخانه استاندارد Google Model-Viewer -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
   <style>
@@ -57,14 +56,12 @@
       outline: none;
       font-size: 0.9rem;
     }
-    /* کانتینر اصلی مدل ویوور */
     model-viewer {
       width: 100%;
       height: 100%;
       --poster-color: transparent;
       outline: none;
     }
-    /* کنترل‌های شناور پایین */
     .controls-overlay {
       position: absolute;
       bottom: 24px;
@@ -96,7 +93,6 @@
       background: #3b82f6;
       border-color: #3b82f6;
     }
-    /* آیکون AR داخلی گوگل */
     .ar-button {
       background: #3b82f6;
       color: #fff;
@@ -106,6 +102,9 @@
       font-weight: bold;
       font-size: 0.82rem;
       cursor: pointer;
+    }
+    .ar-button:hover {
+      background: #2563eb;
     }
     .loading-bar {
       position: absolute;
@@ -123,17 +122,11 @@
   <header>
     <div class="title-box">
       <h1 id="currentModelTitle">در حال بارگذاری...</h1>
-      <p>چرخش ۳۶۰ درجه به تمام جهات (بالا، پایین، چپ و راست)</p>
+      <p>چرخش ۳۶۰ درجه آزاد (بالا، پایین، چپ و راست)</p>
     </div>
     <select id="modelDropdown" class="model-selector"></select>
   </header>
 
-  <!-- 
-    اتریبیوت‌های مهم برای چرخش آزاد همه‌جهته:
-    min-camera-orbit="auto 0deg auto"
-    max-camera-orbit="auto 180deg auto"
-    باعث می‌شود کاربر بتواند مدل را از بالا، پایین و همه زوایا بدون قفل مشاهده کند.
-  -->
   <model-viewer
     id="mainViewer"
     src=""
@@ -142,7 +135,7 @@
     camera-controls
     min-camera-orbit="auto 0deg auto"
     max-camera-orbit="auto 180deg auto"
-    interaction-prompt="auto"
+    interaction-prompt="none"
     shadow-intensity="1"
     shadow-softness="0.8"
     exposure="1.2"
@@ -153,7 +146,7 @@
     <div class="controls-overlay">
       <button class="btn-control" id="toggleAutoRotateBtn">🔄 چرخش خودکار</button>
       <button class="btn-control" id="resetCameraBtn">🎯 ریست زاویه</button>
-      <button slot="ar-button" class="ar-button">📱 نمایش در واقعیت افزوده</button>
+      <button slot="ar-button" class="ar-button">📱 نمایش با دوربین در فضا (AR)</button>
     </div>
   </model-viewer>
 
@@ -175,7 +168,7 @@
     "autoRotateSpeed": 30
   },
   {
-    "id": 1790930182021,
+    "id": 1790930611796,
     "title": "مدل شماره 2",
     "fileName": "model2.glb",
     "scale": 1,
@@ -196,7 +189,6 @@
     const toggleAutoRotateBtn = document.getElementById('toggleAutoRotateBtn');
     const resetCameraBtn = document.getElementById('resetCameraBtn');
 
-    // پر کردن لیست کشویی مدل‌ها
     modelsData.forEach((m, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
@@ -214,37 +206,33 @@
 
       titleEl.textContent = m.title || 'مدل سه‌بعدی';
 
-      // تنظیم مسیر مدل
       const path = m.fileName.startsWith('http') || m.fileName.startsWith('/') 
         ? m.fileName 
         : 'models/' + m.fileName;
       
       viewer.setAttribute('src', path);
 
-      // مقیاس
       const s = m.scale || 1.0;
       viewer.setAttribute('scale', `${s} ${s} ${s}`);
 
-      // موقعیت مکانی (Camera Target)
       const px = (m.posX || 0) + 'm';
       const py = (m.posY || 0) + 'm';
       const pz = (m.posZ || 0) + 'm';
       viewer.setAttribute('camera-target', `${px} ${py} ${pz}`);
 
-      // چرخش زاویه اولیه
       const rx = (m.rotX || 0) + 'deg';
       const ry = (m.rotY || 0) + 'deg';
       const rz = (m.rotZ || 0) + 'deg';
       viewer.setAttribute('orientation', `${rx} ${ry} ${rz}`);
 
-      // چرخش دستی همه‌جانبه
       if (m.cameraControls) {
         viewer.setAttribute('camera-controls', '');
+        viewer.setAttribute('min-camera-orbit', 'auto 0deg auto');
+        viewer.setAttribute('max-camera-orbit', 'auto 180deg auto');
       } else {
         viewer.removeAttribute('camera-controls');
       }
 
-      // چرخش خودکار و سرعت آن
       if (m.autoRotate) {
         viewer.setAttribute('auto-rotate', '');
       } else {
@@ -259,7 +247,6 @@
       applyModel(parseInt(e.target.value));
     });
 
-    // کلید تاگل چرخش خودکار
     toggleAutoRotateBtn.addEventListener('click', () => {
       if (viewer.hasAttribute('auto-rotate')) {
         viewer.removeAttribute('auto-rotate');
@@ -268,7 +255,6 @@
       }
     });
 
-    // بازنشانی دوربین
     resetCameraBtn.addEventListener('click', () => {
       viewer.cameraOrbit = '0deg 75deg 105%';
       if (viewer.resetTurntableRotation) {
@@ -276,7 +262,6 @@
       }
     });
 
-    // بارگذاری اولین مدل
     if (modelsData.length > 0) {
       applyModel(0);
     }
