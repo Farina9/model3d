@@ -1,92 +1,186 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>WebAR</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>واقعیت افزوده مبتنی بر تصویر</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
   <style>
-    body { margin: 0; overflow: hidden; }
-    a-scene { width: 100vw; height: 100vh; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+
+    /* حذف کامل دکمه‌ها و پنجره‌های مزاحم VR و AR */
+    .a-enter-vr,
+    .a-enter-ar,
+    .a-enter-vr-button,
+    .a-orientation-modal,
+    .a-modal,
+    .mindar-ui-overlay,
+    .mindar-ui-scanning {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    #statusBadge {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      background: rgba(15, 23, 42, 0.85);
+      color: #f8fafc;
+      padding: 9px 20px;
+      border-radius: 9999px;
+      font-size: 0.88rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
   </style>
+
+  <script>
+    AFRAME.registerComponent("fix-model", {
+      init: function () {
+        this.el.addEventListener("model-loaded", () => {
+          const mesh = this.el.getObject3D("mesh");
+          if (mesh) {
+            mesh.traverse((node) => {
+              if (node.isMesh) {
+                node.frustumCulled = false;
+                if (node.material) {
+                  node.material.depthTest = true;
+                  node.material.depthWrite = true;
+                  node.material.needsUpdate = true;
+                }
+              }
+            });
+          }
+        });
+
+        this.el.addEventListener("model-error", (e) => {
+          console.error("خطا در بارگذاری فایل مدل GLB:", e);
+          const badge = document.getElementById("statusBadge");
+          if (badge) badge.textContent = "❌ فایل مدل در پوشه models پیدا نشد!";
+        });
+      }
+    });
+
+    AFRAME.registerComponent("auto-turn", {
+      schema: { speed: { type: "number", default: 40 } },
+      tick: function (time, timeDelta) {
+        if (!timeDelta) return;
+        const rot = this.el.getAttribute("rotation");
+        this.el.setAttribute("rotation", {
+          x: rot.x,
+          y: rot.y + (this.data.speed * timeDelta) / 1000,
+          z: rot.z
+        });
+      }
+    });
+
+    AFRAME.registerComponent("touch-turn", {
+      init: function () {
+        let isTouching = false;
+        let startX = 0, startY = 0;
+
+        window.addEventListener("touchstart", (e) => {
+          if (e.touches.length === 1) {
+            isTouching = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+          }
+        }, { passive: true });
+
+        window.addEventListener("touchmove", (e) => {
+          if (!isTouching || e.touches.length !== 1) return;
+          const deltaX = e.touches[0].clientX - startX;
+          const deltaY = e.touches[0].clientY - startY;
+          const rot = this.el.getAttribute("rotation");
+
+          this.el.setAttribute("rotation", {
+            x: rot.x - deltaY * 0.35,
+            y: rot.y + deltaX * 0.35,
+            z: rot.z
+          });
+
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        window.addEventListener("touchend", () => {
+          isTouching = false;
+        });
+      }
+    });
+  </script>
 </head>
+
 <body>
-<a-scene
-  mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes; uiError: yes;"
-  color-space="sRGB"
-  renderer="colorManagement:true;physicallyCorrectLights:true;antialias:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false"
->
-  <a-assets>
-    <a-asset-item id="asset-model1_glb" src="model1.glb"></a-asset-item>
-    <a-asset-item id="asset-model2_glb" src="model2.glb"></a-asset-item>
-  </a-assets>
+  <div id="statusBadge">📷 دوربین را روبروی تصویر تارگت بگیرید</div>
 
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiScanning: no;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
 
-  <!-- مدل 1 (روی عکس 1) | target 0 -->
-  <a-entity mindar-image-target="targetIndex: 0">
-    <a-entity
-      position="0 0 0"
-      rotation="0 0 0"
-      scale="0.75 0.75 0.75"
-      auto-rotate="speed:45"
-      touch-rotate="speed:0.4"
-    >
-      <a-gltf-model src="#asset-model1_glb" animation-mixer></a-gltf-model>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-light type="ambient" intensity="2.2"></a-light>
+    <a-light type="directional" position="1 2 2" intensity="1.8"></a-light>
+
+<!-- تارگت 0 : مدل اول -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity position="0 0 0.1">
+        <a-entity
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          auto-turn="speed: 40"
+          touch-turn>
+          <a-gltf-model
+            src="models/model1.glb"
+            fix-model>
+          </a-gltf-model>
+        </a-entity>
+      </a-entity>
     </a-entity>
-  </a-entity>
-
-  <!-- مدل 2 (روی عکس 2) | target 1 -->
-  <a-entity mindar-image-target="targetIndex: 1">
-    <a-entity
-      position="0 0 0"
-      rotation="0 0 0"
-      scale="0.75 0.75 0.75"
-      auto-rotate="speed:45"
-      touch-rotate="speed:0.4"
-    >
-      <a-gltf-model src="#asset-model2_glb" animation-mixer></a-gltf-model>
+    <!-- تارگت 1 : مدل 2 -->
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-entity position="0 0 0.1">
+        <a-entity
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          auto-turn="speed: 40"
+          touch-turn>
+          <a-gltf-model
+            src="models/model2.glb"
+            fix-model>
+          </a-gltf-model>
+        </a-entity>
+      </a-entity>
     </a-entity>
-  </a-entity>
-</a-scene>
 
-<script>
-/* ── Auto-rotate component ── */
-AFRAME.registerComponent('auto-rotate', {
-  schema: { speed: { type: 'number', default: 45 } },
-  tick(t, dt) {
-    this.el.object3D.rotation.y += THREE.MathUtils.degToRad(this.data.speed * dt / 1000);
-  }
-});
+  </a-scene>
 
-/* ── Touch-rotate component ── */
-AFRAME.registerComponent('touch-rotate', {
-  schema: { speed: { type: 'number', default: 0.4 } },
-  init() {
-    this._onTouchStart = this.onTouchStart.bind(this);
-    this._onTouchMove  = this.onTouchMove.bind(this);
-    window.addEventListener('touchstart', this._onTouchStart, { passive: true });
-    window.addEventListener('touchmove',  this._onTouchMove,  { passive: true });
-    this.lastX = 0;
-    this.touching = false;
-  },
-  remove() {
-    window.removeEventListener('touchstart', this._onTouchStart);
-    window.removeEventListener('touchmove',  this._onTouchMove);
-  },
-  onTouchStart(e) {
-    this.touching = true;
-    this.lastX = e.touches[0].clientX;
-  },
-  onTouchMove(e) {
-    if (!this.touching) return;
-    const dx = e.touches[0].clientX - this.lastX;
-    this.el.object3D.rotation.y += THREE.MathUtils.degToRad(dx * this.data.speed);
-    this.lastX = e.touches[0].clientX;
-  }
-});
-</script>
+  <script>
+    const badge = document.getElementById("statusBadge");
+    const targets = document.querySelectorAll("[mindar-image-target]");
+
+    targets.forEach(target => {
+      target.addEventListener("targetFound", () => {
+        if (badge) badge.textContent = "✨ تصویر شناسایی شد";
+      });
+      target.addEventListener("targetLost", () => {
+        if (badge) badge.textContent = "📷 دوربین را روبروی تصویر تارگت بگیرید";
+      });
+    });
+  </script>
 </body>
 </html>
