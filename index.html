@@ -2,158 +2,48 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>نمایشگر سه‌بعدی WebAR</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نمایشگر سه‌بعدی</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    body {
-      background: #090d16;
-      color: #fff;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    header {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      padding: 14px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: linear-gradient(180deg, rgba(9,13,22,0.85) 0%, rgba(9,13,22,0) 100%);
-      pointer-events: none;
-    }
-    header * {
-      pointer-events: auto;
-    }
-    .title-box h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-    .title-box p {
-      font-size: 0.8rem;
-      color: #94a3b8;
-    }
-    .model-selector {
-      background: rgba(18, 26, 42, 0.9);
-      border: 1px solid #243352;
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 8px;
-      outline: none;
-      font-size: 0.9rem;
-    }
-    model-viewer {
-      width: 100%;
-      height: 100%;
-      --poster-color: transparent;
-      outline: none;
-    }
-    .controls-overlay {
-      position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: flex;
-      gap: 12px;
-      background: rgba(18, 26, 42, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 8px 14px;
-      border-radius: 30px;
-      border: 1px solid #243352;
-    }
-    .btn-control {
-      background: transparent;
-      border: 1px solid #334155;
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 0.82rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-    .btn-control:hover {
-      background: #3b82f6;
-      border-color: #3b82f6;
-    }
-    .ar-button {
-      background: #3b82f6;
-      color: #fff;
-      border: none;
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-weight: bold;
-      font-size: 0.82rem;
-      cursor: pointer;
-    }
-    .ar-button:hover {
-      background: #2563eb;
-    }
-    .loading-bar {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #38bdf8;
-      font-size: 0.9rem;
-      display: none;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { background: #080c14; color: #fff; width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    header { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(8,12,20,0.85), transparent); }
+    select { background: #151d30; color: #fff; border: 1px solid #3b82f6; padding: 8px 14px; border-radius: 8px; outline: none; font-size: 0.9rem; }
+    model-viewer { width: 100%; height: 100%; }
+    .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 10px; }
+    .btn { background: rgba(21, 29, 48, 0.85); backdrop-filter: blur(8px); border: 1px solid #263554; color: #fff; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
+    .btn:hover { background: #3b82f6; }
+    .btn-ar { background: #3b82f6; border: none; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="title-box">
-      <h1 id="currentModelTitle">در حال بارگذاری...</h1>
-      <p>چرخش ۳۶۰ درجه آزاد (بالا، پایین، چپ و راست)</p>
-    </div>
-    <select id="modelDropdown" class="model-selector"></select>
+    <h2 id="modelTitle">در حال بارگذاری...</h2>
+    <select id="modelSelect"></select>
   </header>
 
   <model-viewer
-    id="mainViewer"
-    src=""
-    ar
-    ar-modes="webxr scene-viewer quick-look"
+    id="viewer"
     camera-controls
     min-camera-orbit="auto 0deg auto"
     max-camera-orbit="auto 180deg auto"
     interaction-prompt="none"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
     shadow-intensity="1"
-    shadow-softness="0.8"
-    exposure="1.2"
-    environment-image="neutral">
-    
-    <div slot="progress-bar" class="loading-bar">در حال دانلود مدل سه‌بعدی...</div>
-
-    <div class="controls-overlay">
-      <button class="btn-control" id="toggleAutoRotateBtn">🔄 چرخش خودکار</button>
-      <button class="btn-control" id="resetCameraBtn">🎯 ریست زاویه</button>
-      <button slot="ar-button" class="ar-button">📱 نمایش با دوربین در فضا (AR)</button>
+    exposure="1.2">
+    <div class="controls">
+      <button class="btn" id="toggleRotate">🔄 چرخش خودکار</button>
+      <button class="btn" id="resetCam">🎯 ریست زاویه</button>
+      <button slot="ar-button" class="btn btn-ar">📱 مشاهده در فضا (AR)</button>
     </div>
   </model-viewer>
 
   <script>
-    const modelsData = [
+    const data = [
   {
-    "id": 1,
     "title": "مدل اول",
     "fileName": "model1.glb",
     "scale": 1,
@@ -163,13 +53,12 @@
     "rotX": 0,
     "rotY": 0,
     "rotZ": 0,
-    "cameraControls": true,
+    "manualRotate": true,
     "autoRotate": true,
     "autoRotateSpeed": 30
   },
   {
-    "id": 1790930611796,
-    "title": "مدل شماره 2",
+    "title": "مدل 2",
     "fileName": "model2.glb",
     "scale": 1,
     "posX": 0,
@@ -178,93 +67,56 @@
     "rotX": 0,
     "rotY": 0,
     "rotZ": 0,
-    "cameraControls": true,
+    "manualRotate": true,
     "autoRotate": true,
     "autoRotateSpeed": 30
   }
 ];
-    const viewer = document.getElementById('mainViewer');
-    const dropdown = document.getElementById('modelDropdown');
-    const titleEl = document.getElementById('currentModelTitle');
-    const toggleAutoRotateBtn = document.getElementById('toggleAutoRotateBtn');
-    const resetCameraBtn = document.getElementById('resetCameraBtn');
+    const viewer = document.getElementById('viewer');
+    const select = document.getElementById('modelSelect');
+    const title = document.getElementById('modelTitle');
 
-    modelsData.forEach((m, idx) => {
+    data.forEach((m, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = m.title || `مدل ${idx + 1}`;
-      dropdown.appendChild(opt);
+      opt.textContent = m.title;
+      select.appendChild(opt);
     });
 
-    if (modelsData.length <= 1) {
-      dropdown.style.display = 'none';
-    }
+    if (data.length <= 1) select.style.display = 'none';
 
-    function applyModel(idx) {
-      const m = modelsData[idx];
+    function setModel(idx) {
+      const m = data[idx];
       if (!m) return;
+      title.textContent = m.title;
+      viewer.src = m.fileName.startsWith('http') ? m.fileName : 'models/' + m.fileName;
+      viewer.scale = `${m.scale} ${m.scale} ${m.scale}`;
+      viewer.setAttribute('camera-target', `${m.posX}m ${m.posY}m ${m.posZ}m`);
+      viewer.orientation = `${m.rotX}deg ${m.rotY}deg ${m.rotZ}deg`;
 
-      titleEl.textContent = m.title || 'مدل سه‌بعدی';
-
-      const path = m.fileName.startsWith('http') || m.fileName.startsWith('/') 
-        ? m.fileName 
-        : 'models/' + m.fileName;
-      
-      viewer.setAttribute('src', path);
-
-      const s = m.scale || 1.0;
-      viewer.setAttribute('scale', `${s} ${s} ${s}`);
-
-      const px = (m.posX || 0) + 'm';
-      const py = (m.posY || 0) + 'm';
-      const pz = (m.posZ || 0) + 'm';
-      viewer.setAttribute('camera-target', `${px} ${py} ${pz}`);
-
-      const rx = (m.rotX || 0) + 'deg';
-      const ry = (m.rotY || 0) + 'deg';
-      const rz = (m.rotZ || 0) + 'deg';
-      viewer.setAttribute('orientation', `${rx} ${ry} ${rz}`);
-
-      if (m.cameraControls) {
+      if (m.manualRotate) {
         viewer.setAttribute('camera-controls', '');
-        viewer.setAttribute('min-camera-orbit', 'auto 0deg auto');
-        viewer.setAttribute('max-camera-orbit', 'auto 180deg auto');
       } else {
         viewer.removeAttribute('camera-controls');
       }
 
       if (m.autoRotate) {
         viewer.setAttribute('auto-rotate', '');
+        viewer.setAttribute('rotation-per-second', `${m.autoRotateSpeed}deg`);
       } else {
         viewer.removeAttribute('auto-rotate');
       }
-
-      const speed = m.autoRotateSpeed !== undefined ? m.autoRotateSpeed : 30;
-      viewer.setAttribute('rotation-per-second', `${speed}deg`);
     }
 
-    dropdown.addEventListener('change', (e) => {
-      applyModel(parseInt(e.target.value));
+    select.addEventListener('change', e => setModel(parseInt(e.target.value)));
+    document.getElementById('toggleRotate').addEventListener('click', () => {
+      viewer.hasAttribute('auto-rotate') ? viewer.removeAttribute('auto-rotate') : viewer.setAttribute('auto-rotate', '');
     });
-
-    toggleAutoRotateBtn.addEventListener('click', () => {
-      if (viewer.hasAttribute('auto-rotate')) {
-        viewer.removeAttribute('auto-rotate');
-      } else {
-        viewer.setAttribute('auto-rotate', '');
-      }
-    });
-
-    resetCameraBtn.addEventListener('click', () => {
+    document.getElementById('resetCam').addEventListener('click', () => {
       viewer.cameraOrbit = '0deg 75deg 105%';
-      if (viewer.resetTurntableRotation) {
-        viewer.resetTurntableRotation();
-      }
     });
 
-    if (modelsData.length > 0) {
-      applyModel(0);
-    }
+    if (data.length > 0) setModel(0);
   </script>
 </body>
 </html>
