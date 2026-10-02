@@ -2,107 +2,34 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebAR Viewer</title>
+  <title>WebAR</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    #statusBadge {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 99999;
-      background: rgba(15, 23, 42, 0.85);
-      color: #f8fafc;
-      padding: 9px 20px;
-      border-radius: 9999px;
-      font-size: 0.88rem;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      font-family: sans-serif;
-      pointer-events: none;
-      direction: rtl;
-    }
+    /* حذف کامل دکمه‌های VR و رابط‌های مزاحم */
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal, .a-modal, #a-scene-container { display: none !important; visibility: hidden !important; }
+    body { margin: 0; padding: 0; overflow: hidden; }
   </style>
   <script>
-    AFRAME.registerComponent("auto-turn", {
-      schema: { speed: { type: "number", default: 40 } },
-      tick: function (time, timeDelta) {
-        if (!timeDelta) return;
-        const rot = this.el.getAttribute("rotation");
-        this.el.setAttribute("rotation", {
-          x: rot.x,
-          y: rot.y + (this.data.speed * timeDelta) / 1000,
-          z: rot.z
-        });
-      }
-    });
-    AFRAME.registerComponent("touch-turn", {
-      init: function () {
-        let isTouching = false;
-        let startX = 0, startY = 0;
-        window.addEventListener("touchstart", (e) => {
-          if (e.touches.length === 1) {
-            isTouching = true;
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-          }
-        }, { passive: true });
-        window.addEventListener("touchmove", (e) => {
-          if (!isTouching || e.touches.length !== 1) return;
-          const deltaX = e.touches[0].clientX - startX;
-          const deltaY = e.touches[0].clientY - startY;
-          const rot = this.el.getAttribute("rotation");
-          this.el.setAttribute("rotation", {
-            x: rot.x - deltaY * 0.35,
-            y: rot.y + deltaX * 0.35,
-            z: rot.z
-          });
-          startX = e.touches[0].clientX;
-          startY = e.touches[0].clientY;
-        }, { passive: true });
-        window.addEventListener("touchend", () => { isTouching = false; });
-      }
-    });
+    AFRAME.registerComponent("auto-turn", { schema: { speed: { default: 40 } }, tick: function (t, dt) { if (!dt) return; const rot = this.el.getAttribute("rotation"); this.el.setAttribute("rotation", {x: rot.x, y: rot.y + (this.data.speed * dt) / 1000, z: rot.z}); } });
+    AFRAME.registerComponent("touch-turn", { init: function () { let isTouching = false, startX = 0, startY = 0; window.addEventListener("touchstart", (e) => { if(e.touches.length===1) { isTouching=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY; } }, {passive:true}); window.addEventListener("touchmove", (e) => { if(!isTouching || e.touches.length!==1) return; const dx = e.touches[0].clientX - startX, dy = e.touches[0].clientY - startY, rot = this.el.getAttribute("rotation"); this.el.setAttribute("rotation", {x: rot.x - dy * 0.35, y: rot.y + dx * 0.35, z: rot.z}); startX=e.touches[0].clientX; startY=e.touches[0].clientY; }, {passive:true}); window.addEventListener("touchend", () => isTouching=false); } });
   </script>
 </head>
 <body>
-  <div id="statusBadge">📷 دوربین را روبروی تصویر تارگت بگیرید</div>
   <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-<a-entity mindar-image-target="targetIndex: 0">
-      <a-entity position="0 0 0.1">
-        <a-entity
-          scale="0.5 0.5 0.5"
-          rotation="0 0 0"
-          auto-turn="speed: 40"
-          touch-turn>
-          <a-gltf-model src="models/model1.glb"></a-gltf-model>
-        </a-entity>
+    
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity position="0 0 0.1" rotation="0 0 0" scale="0.75 0.75 0.75" auto-turn="speed: 40" touch-turn>
+        <a-gltf-model src="models/model1.glb"></a-gltf-model>
       </a-entity>
     </a-entity>
+
     <a-entity mindar-image-target="targetIndex: 1">
-      <a-entity position="0 0 0.1">
-        <a-entity
-          scale="0.5 0.5 0.5"
-          rotation="0 0 0"
-          auto-turn="speed: 40"
-          touch-turn>
-          <a-gltf-model src="models/model2.glb"></a-gltf-model>
-        </a-entity>
+      <a-entity position="0 0 0.1" rotation="0 0 0" scale="0.75 0.75 0.75" auto-turn="speed: 40" touch-turn>
+        <a-gltf-model src="models/model2.glb"></a-gltf-model>
       </a-entity>
     </a-entity>
   </a-scene>
-  <script>
-    const badge = document.getElementById("statusBadge");
-    const targets = document.querySelectorAll("[mindar-image-target]");
-    targets.forEach(target => {
-      target.addEventListener("targetFound", () => {
-        if (badge) badge.textContent = "✨ تصویر شناسایی شد";
-      });
-      target.addEventListener("targetLost", () => {
-        if (badge) badge.textContent = "📷 دوربین را روبروی تصویر تارگت بگیرید";
-      });
-    });
-  </script>
 </body>
 </html>
