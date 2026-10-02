@@ -10,10 +10,13 @@
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-    
-    /* مخفی‌سازی دکمه‌های VR بدون از کار انداختن دوربین */
-    .a-enter-vr, .a-enter-ar, .a-modal, .a-orientation-modal { display: none !important; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent !important; font-family: sans-serif; }
+    a-scene { background: transparent !important; width: 100% !important; height: 100% !important; }
+
+    /* مخفی‌سازی دکمه‌های VR بدون تأثیر روی ویدیو دوربین */
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal, .a-modal {
+      display: none !important;
+    }
 
     #statusBadge {
       position: fixed;
@@ -28,16 +31,17 @@
       font-size: 0.88rem;
       border: 1px solid rgba(255, 255, 255, 0.2);
       backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
       pointer-events: none;
       transition: all 0.3s ease;
     }
   </style>
 
   <script>
-    AFRAME.registerComponent('fix-model', {
+    AFRAME.registerComponent("fix-model", {
       init: function () {
-        this.el.addEventListener('model-loaded', () => {
-          const mesh = this.el.getObject3D('mesh');
+        this.el.addEventListener("model-loaded", () => {
+          const mesh = this.el.getObject3D("mesh");
           if (mesh) {
             mesh.traverse((node) => {
               if (node.isMesh) {
@@ -51,20 +55,20 @@
           }
         });
 
-        this.el.addEventListener('model-error', (e) => {
-          console.error("خطا در مسیر فایل GLB:", e);
-          const badge = document.getElementById('statusBadge');
+        this.el.addEventListener("model-error", (e) => {
+          console.error("خطا در بارگذاری فایل مدل GLB:", e);
+          const badge = document.getElementById("statusBadge");
           if (badge) badge.textContent = "❌ فایل مدل در پوشه models پیدا نشد!";
         });
       }
     });
 
-    AFRAME.registerComponent('auto-turn', {
-      schema: { speed: { type: 'number', default: 40 } },
+    AFRAME.registerComponent("auto-turn", {
+      schema: { speed: { type: "number", default: 40 } },
       tick: function (time, timeDelta) {
         if (!timeDelta) return;
-        const rot = this.el.getAttribute('rotation');
-        this.el.setAttribute('rotation', {
+        const rot = this.el.getAttribute("rotation");
+        this.el.setAttribute("rotation", {
           x: rot.x,
           y: rot.y + (this.data.speed * timeDelta) / 1000,
           z: rot.z
@@ -72,12 +76,12 @@
       }
     });
 
-    AFRAME.registerComponent('touch-turn', {
+    AFRAME.registerComponent("touch-turn", {
       init: function () {
         let isTouching = false;
         let startX = 0, startY = 0;
 
-        window.addEventListener('touchstart', (e) => {
+        window.addEventListener("touchstart", (e) => {
           if (e.touches.length === 1) {
             isTouching = true;
             startX = e.touches[0].clientX;
@@ -85,13 +89,13 @@
           }
         }, { passive: true });
 
-        window.addEventListener('touchmove', (e) => {
+        window.addEventListener("touchmove", (e) => {
           if (!isTouching || e.touches.length !== 1) return;
           const deltaX = e.touches[0].clientX - startX;
           const deltaY = e.touches[0].clientY - startY;
-          const rot = this.el.getAttribute('rotation');
+          const rot = this.el.getAttribute("rotation");
 
-          this.el.setAttribute('rotation', {
+          this.el.setAttribute("rotation", {
             x: rot.x - deltaY * 0.35,
             y: rot.y + deltaX * 0.35,
             z: rot.z
@@ -101,7 +105,9 @@
           startY = e.touches[0].clientY;
         }, { passive: true });
 
-        window.addEventListener('touchend', () => { isTouching = false; });
+        window.addEventListener("touchend", () => {
+          isTouching = false;
+        });
       }
     });
   </script>
@@ -113,16 +119,15 @@
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiScanning: no;"
     color-space="sRGB"
-    renderer="colorManagement: true, physicallyCorrectLights: true"
+    renderer="alpha: true, antialias: true, colorManagement: true, physicallyCorrectLights: true"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-light type="ambient" intensity="2"></a-light>
-    <a-light type="directional" position="1 2 2" intensity="1.5"></a-light>
+    <a-light type="ambient" intensity="2.2"></a-light>
+    <a-light type="directional" position="1 2 2" intensity="1.8"></a-light>
 
-
-    <!-- تارگت 0 -->
+<!-- تارگت 0 : مدل اول -->
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity position="0 0 0.1">
         <a-entity
@@ -130,12 +135,14 @@
           rotation="0 0 0"
           auto-turn="speed: 40"
           touch-turn>
-          <a-gltf-model src="models/model1.glb" fix-model></a-gltf-model>
+          <a-gltf-model
+            src="models/model1.glb"
+            fix-model>
+          </a-gltf-model>
         </a-entity>
       </a-entity>
     </a-entity>
-
-    <!-- تارگت 1 -->
+    <!-- تارگت 1 : مدل 2 -->
     <a-entity mindar-image-target="targetIndex: 1">
       <a-entity position="0 0 0.1">
         <a-entity
@@ -143,7 +150,10 @@
           rotation="0 0 0"
           auto-turn="speed: 40"
           touch-turn>
-          <a-gltf-model src="models/model2.glb" fix-model></a-gltf-model>
+          <a-gltf-model
+            src="models/model2.glb"
+            fix-model>
+          </a-gltf-model>
         </a-entity>
       </a-entity>
     </a-entity>
@@ -151,15 +161,15 @@
   </a-scene>
 
   <script>
-    const badge = document.getElementById('statusBadge');
-    const targets = document.querySelectorAll('[mindar-image-target]');
+    const badge = document.getElementById("statusBadge");
+    const targets = document.querySelectorAll("[mindar-image-target]");
 
     targets.forEach(target => {
-      target.addEventListener('targetFound', () => {
-        if (badge) badge.textContent = '✨ تصویر شناسایی شد';
+      target.addEventListener("targetFound", () => {
+        if (badge) badge.textContent = "✨ تصویر شناسایی شد";
       });
-      target.addEventListener('targetLost', () => {
-        if (badge) badge.textContent = '📷 دوربین را روبروی تصویر تارگت بگیرید';
+      target.addEventListener("targetLost", () => {
+        if (badge) badge.textContent = "📷 دوربین را روبروی تصویر تارگت بگیرید";
       });
     });
   </script>
