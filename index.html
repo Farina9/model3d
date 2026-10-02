@@ -1,133 +1,285 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MindAR 3D Viewer</title>
-  
-  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <title>نمایشگر سه‌بعدی WebAR</title>
+
+  <!-- بارگذاری کتابخانه استاندارد Google Model-Viewer -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    body {
+      background: #090d16;
+      color: #fff;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(9,13,22,0.85) 0%, rgba(9,13,22,0) 100%);
+      pointer-events: none;
+    }
+    header * {
+      pointer-events: auto;
+    }
+    .title-box h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .title-box p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .model-selector {
+      background: rgba(18, 26, 42, 0.9);
+      border: 1px solid #243352;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+    /* کانتینر اصلی مدل ویوور */
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: transparent;
+      outline: none;
+    }
+    /* کنترل‌های شناور پایین */
+    .controls-overlay {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      background: rgba(18, 26, 42, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 8px 14px;
+      border-radius: 30px;
+      border: 1px solid #243352;
+    }
+    .btn-control {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-control:hover {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+    /* آیکون AR داخلی گوگل */
+    .ar-button {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-weight: bold;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .loading-bar {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #38bdf8;
+      font-size: 0.9rem;
+      display: none;
+    }
   </style>
-
-  <script>
-    AFRAME.registerComponent('auto-rotate', {
-      schema: {
-        axis: { type: 'string', default: 'y' },
-        speed: { type: 'number', default: 1 }
-      },
-      tick: function () {
-        const rot = this.el.getAttribute('rotation');
-        rot[this.data.axis] += this.data.speed;
-        this.el.setAttribute('rotation', rot);
-      }
-    });
-
-    AFRAME.registerComponent('gesture-rotation', {
-      init: function () {
-        this.handleTouchMove = this.handleTouchMove.bind(this);
-        this.handleTouchStart = this.handleTouchStart.bind(this);
-        this.handleTouchEnd = this.handleTouchEnd.bind(this);
-
-        this.touchStartX = 0;
-        this.touchStartY = 0;
-        this.isDragging = false;
-
-        window.addEventListener('touchstart', this.handleTouchStart, { passive: false });
-        window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
-        window.addEventListener('touchend', this.handleTouchEnd);
-
-        window.addEventListener('mousedown', (e) => {
-          this.isDragging = true;
-          this.touchStartX = e.clientX;
-          this.touchStartY = e.clientY;
-        });
-        window.addEventListener('mousemove', (e) => {
-          if (!this.isDragging) return;
-          const deltaX = e.clientX - this.touchStartX;
-          const deltaY = e.clientY - this.touchStartY;
-          const rot = this.el.getAttribute('rotation');
-          this.el.setAttribute('rotation', {
-            x: rot.x + deltaY * 0.4,
-            y: rot.y + deltaX * 0.4,
-            z: rot.z
-          });
-          this.touchStartX = e.clientX;
-          this.touchStartY = e.clientY;
-        });
-        window.addEventListener('mouseup', () => { this.isDragging = false; });
-      },
-      handleTouchStart: function (e) {
-        if (e.touches.length === 1) {
-          this.touchStartX = e.touches[0].clientX;
-          this.touchStartY = e.touches[0].clientY;
-          this.isDragging = true;
-        }
-      },
-      handleTouchMove: function (e) {
-        if (!this.isDragging || e.touches.length !== 1) return;
-        const deltaX = e.touches[0].clientX - this.touchStartX;
-        const deltaY = e.touches[0].clientY - this.touchStartY;
-        const rot = this.el.getAttribute('rotation');
-        this.el.setAttribute('rotation', {
-          x: rot.x + deltaY * 0.4,
-          y: rot.y + deltaX * 0.4,
-          z: rot.z
-        });
-        this.touchStartX = e.touches[0].clientX;
-        this.touchStartY = e.touches[0].clientY;
-      },
-      handleTouchEnd: function () {
-        this.isDragging = false;
-      }
-    });
-  </script>
 </head>
 <body>
-  <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
-    color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights: true" 
-    vr-mode-ui="enabled: false" 
-    device-orientation-permission-ui="enabled: false">
+
+  <header>
+    <div class="title-box">
+      <h1 id="currentModelTitle">در حال بارگذاری...</h1>
+      <p>چرخش ۳۶۰ درجه به تمام جهات (بالا، پایین، چپ و راست)</p>
+    </div>
+    <select id="modelDropdown" class="model-selector"></select>
+  </header>
+
+  <!-- 
+    اتریبیوت‌های مهم برای چرخش آزاد همه‌جهته:
+    min-camera-orbit="auto 0deg auto"
+    max-camera-orbit="auto 180deg auto"
+    باعث می‌شود کاربر بتواند مدل را از بالا، پایین و همه زوایا بدون قفل مشاهده کند.
+  -->
+  <model-viewer
+    id="mainViewer"
+    src=""
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls
+    min-camera-orbit="auto 0deg auto"
+    max-camera-orbit="auto 180deg auto"
+    interaction-prompt="auto"
+    shadow-intensity="1"
+    shadow-softness="0.8"
+    exposure="1.2"
+    environment-image="neutral">
     
-    <a-assets timeout="10000">
-      <a-asset-item id="asset-0" src="models/model1.glb"></a-asset-item>
-      <a-asset-item id="asset-1" src="models/model2.glb"></a-asset-item>
-    </a-assets>
+    <div slot="progress-bar" class="loading-bar">در حال دانلود مدل سه‌بعدی...</div>
 
-    <a-light type="ambient" intensity="1.5"></a-light>
-    <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
+    <div class="controls-overlay">
+      <button class="btn-control" id="toggleAutoRotateBtn">🔄 چرخش خودکار</button>
+      <button class="btn-control" id="resetCameraBtn">🎯 ریست زاویه</button>
+      <button slot="ar-button" class="ar-button">📱 نمایش در واقعیت افزوده</button>
+    </div>
+  </model-viewer>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <script>
+    const modelsData = [
+  {
+    "id": 1,
+    "title": "مدل اول",
+    "fileName": "model1.glb",
+    "scale": 1,
+    "posX": 0,
+    "posY": 0,
+    "posZ": 0,
+    "rotX": 0,
+    "rotY": 0,
+    "rotZ": 0,
+    "cameraControls": true,
+    "autoRotate": true,
+    "autoRotateSpeed": 30
+  },
+  {
+    "id": 1790930182021,
+    "title": "مدل شماره 2",
+    "fileName": "model2.glb",
+    "scale": 1,
+    "posX": 0,
+    "posY": 0,
+    "posZ": 0,
+    "rotX": 0,
+    "rotY": 0,
+    "rotZ": 0,
+    "cameraControls": true,
+    "autoRotate": true,
+    "autoRotateSpeed": 30
+  }
+];
+    const viewer = document.getElementById('mainViewer');
+    const dropdown = document.getElementById('modelDropdown');
+    const titleEl = document.getElementById('currentModelTitle');
+    const toggleAutoRotateBtn = document.getElementById('toggleAutoRotateBtn');
+    const resetCameraBtn = document.getElementById('resetCameraBtn');
 
-    
-    <!-- تارگت 0 -->
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-entity id="model-wrapper-0"
-                position="0 0 0"
-                rotation="0 0 0"
-                scale="0.5 0.5 0.5"
-                auto-rotate="axis: y; speed: 1"
-                gesture-rotation>
-        <a-gltf-model src="#asset-0" position="0 0 0"></a-gltf-model>
-      </a-entity>
-    </a-entity>
+    // پر کردن لیست کشویی مدل‌ها
+    modelsData.forEach((m, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = m.title || `مدل ${idx + 1}`;
+      dropdown.appendChild(opt);
+    });
 
-    <!-- تارگت 1 -->
-    <a-entity mindar-image-target="targetIndex: 1">
-      <a-entity id="model-wrapper-1"
-                position="0 0 0"
-                rotation="0 0 0"
-                scale="1 1 1"
-                auto-rotate="axis: y; speed: 1"
-                gesture-rotation>
-        <a-gltf-model src="#asset-1" position="0 0 0"></a-gltf-model>
-      </a-entity>
-    </a-entity>
+    if (modelsData.length <= 1) {
+      dropdown.style.display = 'none';
+    }
 
-  </a-scene>
+    function applyModel(idx) {
+      const m = modelsData[idx];
+      if (!m) return;
+
+      titleEl.textContent = m.title || 'مدل سه‌بعدی';
+
+      // تنظیم مسیر مدل
+      const path = m.fileName.startsWith('http') || m.fileName.startsWith('/') 
+        ? m.fileName 
+        : 'models/' + m.fileName;
+      
+      viewer.setAttribute('src', path);
+
+      // مقیاس
+      const s = m.scale || 1.0;
+      viewer.setAttribute('scale', `${s} ${s} ${s}`);
+
+      // موقعیت مکانی (Camera Target)
+      const px = (m.posX || 0) + 'm';
+      const py = (m.posY || 0) + 'm';
+      const pz = (m.posZ || 0) + 'm';
+      viewer.setAttribute('camera-target', `${px} ${py} ${pz}`);
+
+      // چرخش زاویه اولیه
+      const rx = (m.rotX || 0) + 'deg';
+      const ry = (m.rotY || 0) + 'deg';
+      const rz = (m.rotZ || 0) + 'deg';
+      viewer.setAttribute('orientation', `${rx} ${ry} ${rz}`);
+
+      // چرخش دستی همه‌جانبه
+      if (m.cameraControls) {
+        viewer.setAttribute('camera-controls', '');
+      } else {
+        viewer.removeAttribute('camera-controls');
+      }
+
+      // چرخش خودکار و سرعت آن
+      if (m.autoRotate) {
+        viewer.setAttribute('auto-rotate', '');
+      } else {
+        viewer.removeAttribute('auto-rotate');
+      }
+
+      const speed = m.autoRotateSpeed !== undefined ? m.autoRotateSpeed : 30;
+      viewer.setAttribute('rotation-per-second', `${speed}deg`);
+    }
+
+    dropdown.addEventListener('change', (e) => {
+      applyModel(parseInt(e.target.value));
+    });
+
+    // کلید تاگل چرخش خودکار
+    toggleAutoRotateBtn.addEventListener('click', () => {
+      if (viewer.hasAttribute('auto-rotate')) {
+        viewer.removeAttribute('auto-rotate');
+      } else {
+        viewer.setAttribute('auto-rotate', '');
+      }
+    });
+
+    // بازنشانی دوربین
+    resetCameraBtn.addEventListener('click', () => {
+      viewer.cameraOrbit = '0deg 75deg 105%';
+      if (viewer.resetTurntableRotation) {
+        viewer.resetTurntableRotation();
+      }
+    });
+
+    // بارگذاری اولین مدل
+    if (modelsData.length > 0) {
+      applyModel(0);
+    }
+  </script>
 </body>
 </html>
