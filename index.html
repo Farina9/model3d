@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>نمایشگر واقعیت افزوده MindAR</title>
+  <title>MindAR 3D Viewer</title>
   
-  <!-- کتابخانه‌های A-Frame و MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
@@ -14,7 +13,6 @@
   </style>
 
   <script>
-    // کامپوننت چرخش خودکار
     AFRAME.registerComponent('auto-rotate', {
       schema: {
         axis: { type: 'string', default: 'y' },
@@ -27,7 +25,6 @@
       }
     });
 
-    // کامپوننت چرخش دستی همه‌جانبه با لمس یا ماوس
     AFRAME.registerComponent('gesture-rotation', {
       init: function () {
         this.handleTouchMove = this.handleTouchMove.bind(this);
@@ -89,7 +86,6 @@
   </script>
 </head>
 <body>
-  <!-- صحنه واقعیت افزوده همراه با تنظیمات نورپردازی استاندارد محیطی -->
   <a-scene 
     mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
     color-space="sRGB" 
@@ -97,26 +93,30 @@
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
-    <!-- سیستم نورپردازی برای اطمینان از دیده شدن و شفافیت مدل‌ها -->
-    <a-light type="ambient" intensity="1.2"></a-light>
-    <a-light type="directional" position="2 4 3" intensity="1.5"></a-light>
+    <a-assets timeout="10000">
+      <a-asset-item id="asset-0" src="models/model1.glb"></a-asset-item>
+      <a-asset-item id="asset-1" src="models/model2.glb"></a-asset-item>
+    </a-assets>
+
+    <a-light type="ambient" intensity="1.5"></a-light>
+    <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     
-    <!-- تارگت شماره 0 -->
+    <!-- تارگت 0 -->
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity id="model-wrapper-0"
                 position="0 0 0"
                 rotation="0 0 0"
-                scale="1 1 1"
-                
+                scale="0.5 0.5 0.5"
+                auto-rotate="axis: y; speed: 1"
                 gesture-rotation>
-        <a-gltf-model src="models/model1.glb" position="0 0 0"></a-gltf-model>
+        <a-gltf-model src="#asset-0" position="0 0 0"></a-gltf-model>
       </a-entity>
     </a-entity>
 
-    <!-- تارگت شماره 1 -->
+    <!-- تارگت 1 -->
     <a-entity mindar-image-target="targetIndex: 1">
       <a-entity id="model-wrapper-1"
                 position="0 0 0"
@@ -124,7 +124,7 @@
                 scale="1 1 1"
                 auto-rotate="axis: y; speed: 1"
                 gesture-rotation>
-        <a-gltf-model src="models/model2.glb" position="0 0 0"></a-gltf-model>
+        <a-gltf-model src="#asset-1" position="0 0 0"></a-gltf-model>
       </a-entity>
     </a-entity>
 
