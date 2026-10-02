@@ -1,184 +1,129 @@
 <!DOCTYPE html>
-<!-- صفحهٔ خروجی مستقل واقعیت افزوده؛ این فایل را همراه targets.mind و فایل‌های GLB در دسترس وب قرار دهید. -->
-<html lang="fa" dir="rtl">
+<html lang="fa">
 <head>
-  <!-- سرصفحهٔ خروجی: UTF-8 برای فارسی، viewport موبایل و عنوان صفحه -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>واقعیت افزوده - نمایش مدل ۳ بعدی</title>
-  <!-- بارگذاری کتابخانهٔ A-Frame برای صحنهٔ سه‌بعدی و MindAR برای تشخیص تصویر هدف (targets.mind). -->
-  <!-- A-Frame & MindAR Image Tracking -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>نمایشگر واقعیت افزوده MindAR</title>
+  <!-- کتابخانه‌های مورد نیاز MindAR و A-Frame -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-  <!-- CSS خروجی AR: حذف حاشیه‌ها، تمام‌صفحه‌کردن دوربین و استایل پیام شناور روی تصویر. -->
+
   <style>
-    /* پاک‌سازی فاصله‌های پیش‌فرض تا نمای دوربین تمام صفحه را بپوشاند. */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    /* جلوگیری از اسکرول و انتخاب فونت عمومی روی نمای دوربین */
-    body { overflow: hidden; font-family: sans-serif; background: #000; }
-    /* لایهٔ راهنما بالای صحنه؛ pointer-events:none اجازه می‌دهد لمس به تعامل AR برسد. */
-    #overlay-hint {
-      position: absolute;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 20px;
-      font-size: 14px;
-      z-index: 1000;
-      pointer-events: none;
-      backdrop-filter: blur(4px);
-    }
-    /* در موبایل پیام راهنما خوانا می‌ماند و روی ناحیهٔ اصلی تصویر مزاحمت حداقلی دارد. */
+    body { margin: 0; overflow: hidden; }
   </style>
+
+  <script>
+    // کامپوننت چرخش خودکار بر اساس تنظیمات پنل
+    AFRAME.registerComponent('auto-rotate', {
+      schema: {
+        axis: { type: 'string', default: 'y' },
+        speed: { type: 'number', default: 1 }
+      },
+      tick: function () {
+        const rot = this.el.getAttribute('rotation');
+        rot[this.data.axis] += this.data.speed;
+        this.el.setAttribute('rotation', rot);
+      }
+    });
+
+    // کامپوننت چرخش همه‌جانبه دستی با تاچ یا کشیدن ماوس
+    AFRAME.registerComponent('gesture-rotation', {
+      init: function () {
+        this.handleTouchMove = this.handleTouchMove.bind(this);
+        this.handleTouchStart = this.handleTouchStart.bind(this);
+        this.handleTouchEnd = this.handleTouchEnd.bind(this);
+
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.isDragging = false;
+
+        window.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+        window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+        window.addEventListener('touchend', this.handleTouchEnd);
+
+        // پشتیبانی از ماوس برای بررسی در کامپیوتر
+        window.addEventListener('mousedown', (e) => {
+          this.isDragging = true;
+          this.touchStartX = e.clientX;
+          this.touchStartY = e.clientY;
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!this.isDragging) return;
+          const deltaX = e.clientX - this.touchStartX;
+          const deltaY = e.clientY - this.touchStartY;
+          const rot = this.el.getAttribute('rotation');
+          this.el.setAttribute('rotation', {
+            x: rot.x + deltaY * 0.4,
+            y: rot.y + deltaX * 0.4,
+            z: rot.z
+          });
+          this.touchStartX = e.clientX;
+          this.touchStartY = e.clientY;
+        });
+        window.addEventListener('mouseup', () => { this.isDragging = false; });
+      },
+      handleTouchStart: function (e) {
+        if (e.touches.length === 1) {
+          this.touchStartX = e.touches[0].clientX;
+          this.touchStartY = e.touches[0].clientY;
+          this.isDragging = true;
+        }
+      },
+      handleTouchMove: function (e) {
+        if (!this.isDragging || e.touches.length !== 1) return;
+        const deltaX = e.touches[0].clientX - this.touchStartX;
+        const deltaY = e.touches[0].clientY - this.touchStartY;
+        const rot = this.el.getAttribute('rotation');
+        this.el.setAttribute('rotation', {
+          x: rot.x + deltaY * 0.4,
+          y: rot.y + deltaX * 0.4,
+          z: rot.z
+        });
+        this.touchStartX = e.touches[0].clientX;
+        this.touchStartY = e.touches[0].clientY;
+      },
+      handleTouchEnd: function () {
+        this.isDragging = false;
+      }
+    });
+  </script>
 </head>
 <body>
-  <!-- بدنهٔ خروجی: پیام وضعیت و صحنهٔ AR تمام صفحه در این بخش نمایش داده می‌شوند. -->
-  <div id="overlay-hint" role="status" aria-live="polite">📱 دوربین را مقابل تصویر هدف (تارگت) بگیرید</div>
-
-  <!-- صحنهٔ A-Frame و تنظیمات MindAR: منبع targets.mind، پالایش تشخیص و خاموش‌کردن کنترل‌های VR غیرضروری. -->
+  <!-- صحنه واقعیت افزوده متصل به فایل targets.mind -->
   <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
+    mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
     color-space="sRGB" 
     renderer="colorManagement: true, physicallyCorrectLights" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
-    <!-- ثبت فایل‌های GLB در مخزن دارایی A-Frame؛ شناسهٔ هر دارایی در gltf-model استفاده می‌شود. -->
-    <!-- خود A-Frame با درخواست مسیر src فایل را از هاست می‌خواند و glTF loader آن را برای نمایش آماده می‌کند؛ فایل در config جاسازی نمی‌شود. -->
-    <a-assets>
-      <a-asset-item id="modelAsset_0" src="model1.glb"></a-asset-item>
-      <a-asset-item id="modelAsset_1" src="model2.glb"></a-asset-item>
-    </a-assets>
-
-    <!-- دوربین در مبدأ صحنه؛ کنترل چرخش پیش‌فرض خاموش است تا رهگیری تصویر مسیر دید را کنترل کند. -->
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- برای هر تنظیم، یک گرهٔ تارگت مستقل و مدل سه‌بعدی با موقعیت/مقیاس/چرخش اولیه ساخته می‌شود. -->
     
-    <!-- تارگت شماره 0: این entity با تصویر متناظر در targets.mind فعال می‌شود. -->
+    <!-- تارگت شماره 0 -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-entity 
-        id="modelEntity_0"
-        gltf-model="#modelAsset_0"
-        position="0 0 0"
-        scale="0.5 0.5 0.5"
-        rotation="0 0 0">
+      <a-entity id="model-wrapper-0"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                auto-rotate="axis: y; speed: 1"
+                gesture-rotation>
+        <a-gltf-model src="models/model1.glb"></a-gltf-model>
       </a-entity>
     </a-entity>
-    
-    
-    <!-- تارگت شماره 1: این entity با تصویر متناظر در targets.mind فعال می‌شود. -->
+
+    <!-- تارگت شماره 1 -->
     <a-entity mindar-image-target="targetIndex: 1">
-      <a-entity 
-        id="modelEntity_1"
-        gltf-model="#modelAsset_1"
-        position="0 0 0"
-        scale="0.5 0.5 0.5"
-        rotation="0 0 0">
+      <a-entity id="model-wrapper-1"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                auto-rotate="axis: y; speed: 1"
+                gesture-rotation>
+        <a-gltf-model src="models/model2.glb"></a-gltf-model>
       </a-entity>
     </a-entity>
-    
+
   </a-scene>
-
-  <!-- منطق زمان اجرای صفحهٔ AR: بارگذاری تنظیمات جاسازی‌شده، چرخش مدل‌ها و مدیریت وضعیت تارگت. -->
-  <script>
-    // تنظیمات ثابت ساخته‌شده از فرم پنل؛ هر رکورد با entity مدل هم‌شماره است.
-    const CONFIG = [
-  {
-    "targetIndex": 0,
-    "modelName": "model1.glb",
-    "scale": 0.5,
-    "posX": 0,
-    "posY": 0,
-    "posZ": 0,
-    "rotX": 0,
-    "rotY": 0,
-    "rotZ": 0,
-    "autoRotate": true,
-    "rotSpeed": 1,
-    "touchRotate": true
-  },
-  {
-    "targetIndex": 1,
-    "modelName": "model2.glb",
-    "scale": 0.5,
-    "posX": 0,
-    "posY": 0,
-    "posZ": 0,
-    "rotX": 0,
-    "rotY": 0,
-    "rotZ": 0,
-    "autoRotate": true,
-    "rotSpeed": 1,
-    "touchRotate": true
-  }
-];
-    // عنصر پیام شناور وضعیت تشخیص تصویر را به کاربر نشان می‌دهد.
-    const hint = document.getElementById('overlay-hint');
-
-    // برای هر مدل، تنظیم رویدادهای تارگت و کنترل‌های چرخش جداگانه انجام می‌شود.
-    CONFIG.forEach((cfg, idx) => {
-      const el = document.getElementById('modelEntity_' + idx);
-      if (!el) return;
-      // MindAR رویداد targetFound را هنگام قفل‌شدن روی تصویر و targetLost را هنگام خروج تصویر منتشر می‌کند.
-      const target = el.closest('[mindar-image-target]');
-      if (target) {
-        target.addEventListener('targetFound', () => { hint.textContent = '✅ تارگت شناسایی شد؛ مدل در حال نمایش است'; });
-        target.addEventListener('targetLost', () => { hint.textContent = '📱 دوربین را مقابل تصویر هدف (تارگت) بگیرید'; });
-      }
-    });
-
-    // حلقهٔ اجرایی برای اعمال چرخش روی هر entity مدل؛ زاویهٔ Y یکپارچه بین خودکار و لمس نگهداری می‌شود.
-    CONFIG.forEach((cfg, idx) => {
-      const el = document.getElementById('modelEntity_' + idx);
-      if (!el) return;
-      let currentRotY = cfg.rotY || 0;
-
-      // چرخش خودکار: requestAnimationFrame در هر فریم اجرا می‌شود و dt سرعت را مستقل از نرخ فریم می‌کند.
-      // ضریب سرعت تنظیم‌شده بر مبنای درجه در ثانیه به زاویهٔ Y افزوده می‌شود.
-      // چرخش خودکار
-      if (cfg.autoRotate) {
-        let lastTime = performance.now();
-        // تابع حلقهٔ انیمیشن؛ زمان فریم قبلی برای محاسبهٔ حرکت یکنواخت ذخیره می‌شود.
-        function animateRot(now) {
-          const dt = (now - lastTime) / 1000;
-          lastTime = now;
-          currentRotY += (cfg.rotSpeed || 1) * 30 * dt;
-          el.setAttribute('rotation', `${cfg.rotX || 0} ${currentRotY} ${cfg.rotZ || 0}`);
-          // زمان‌بندی فریم بعدی؛ مرورگر هنگام پس‌زمینه‌بودن صفحه معمولاً نرخ را کاهش می‌دهد.
-          requestAnimationFrame(animateRot);
-        }
-        requestAnimationFrame(animateRot);
-      }
-
-      // ژست لمسی: کشیدن افقی تک‌انگشتی، زاویهٔ Y مدل را تغییر می‌دهد؛ لمس چندانگشتی نادیده گرفته می‌شود.
-      // ثبت listenerها روی window باعث می‌شود حرکت انگشت حتی با خروج از مرز خود مدل دنبال شود.
-      // چرخش با لمس صفحه
-      if (cfg.touchRotate) {
-        let isTouching = false;
-        let startX = 0;
-        // آغاز کشیدن: موقعیت افقی انگشت ذخیره و حالت تعامل فعال می‌شود.
-        window.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) {
-            isTouching = true;
-            startX = e.touches[0].clientX;
-          }
-        });
-        // حرکت کشیدن: اختلاف X به چرخش تبدیل و مختصات مبنا برای حرکت بعدی تازه می‌شود.
-        window.addEventListener('touchmove', (e) => {
-          if (!isTouching || e.touches.length !== 1) return;
-          const deltaX = e.touches[0].clientX - startX;
-          startX = e.touches[0].clientX;
-          currentRotY += deltaX * 0.5;
-          el.setAttribute('rotation', `${cfg.rotX || 0} ${currentRotY} ${cfg.rotZ || 0}`);
-        });
-        // پایان ژست: پرچم لمس پاک می‌شود تا حرکت‌های بعدی خارج از کشیدن اعمال نشوند.
-        window.addEventListener('touchend', () => { isTouching = false; });
-      }
-    });
-  </script>
 </body>
 </html>
