@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>نمایشگر واقعیت افزوده MindAR</title>
-  <!-- کتابخانه‌های مورد نیاز MindAR و A-Frame -->
+  
+  <!-- کتابخانه‌های A-Frame و MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
@@ -13,7 +14,7 @@
   </style>
 
   <script>
-    // کامپوننت چرخش خودکار بر اساس تنظیمات پنل
+    // کامپوننت چرخش خودکار
     AFRAME.registerComponent('auto-rotate', {
       schema: {
         axis: { type: 'string', default: 'y' },
@@ -26,7 +27,7 @@
       }
     });
 
-    // کامپوننت چرخش همه‌جانبه دستی با تاچ یا کشیدن ماوس
+    // کامپوننت چرخش دستی همه‌جانبه با لمس یا ماوس
     AFRAME.registerComponent('gesture-rotation', {
       init: function () {
         this.handleTouchMove = this.handleTouchMove.bind(this);
@@ -41,7 +42,6 @@
         window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
         window.addEventListener('touchend', this.handleTouchEnd);
 
-        // پشتیبانی از ماوس برای بررسی در کامپیوتر
         window.addEventListener('mousedown', (e) => {
           this.isDragging = true;
           this.touchStartX = e.clientX;
@@ -89,14 +89,18 @@
   </script>
 </head>
 <body>
-  <!-- صحنه واقعیت افزوده متصل به فایل targets.mind -->
+  <!-- صحنه واقعیت افزوده همراه با تنظیمات نورپردازی استاندارد محیطی -->
   <a-scene 
     mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights" 
+    renderer="colorManagement: true, physicallyCorrectLights: true" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
+    <!-- سیستم نورپردازی برای اطمینان از دیده شدن و شفافیت مدل‌ها -->
+    <a-light type="ambient" intensity="1.2"></a-light>
+    <a-light type="directional" position="2 4 3" intensity="1.5"></a-light>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     
@@ -105,10 +109,10 @@
       <a-entity id="model-wrapper-0"
                 position="0 0 0"
                 rotation="0 0 0"
-                scale="1.5 1.5 1.5"
-                auto-rotate="axis: y; speed: 1"
+                scale="1 1 1"
+                
                 gesture-rotation>
-        <a-gltf-model src="models/model1.glb"></a-gltf-model>
+        <a-gltf-model src="models/model1.glb" position="0 0 0"></a-gltf-model>
       </a-entity>
     </a-entity>
 
@@ -117,10 +121,10 @@
       <a-entity id="model-wrapper-1"
                 position="0 0 0"
                 rotation="0 0 0"
-                scale="1.5 1.5 1.5"
+                scale="1 1 1"
                 auto-rotate="axis: y; speed: 1"
                 gesture-rotation>
-        <a-gltf-model src="models/model2.glb"></a-gltf-model>
+        <a-gltf-model src="models/model2.glb" position="0 0 0"></a-gltf-model>
       </a-entity>
     </a-entity>
 
